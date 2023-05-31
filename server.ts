@@ -10,6 +10,10 @@ const port = 3000;
 
 app.use(bodyParser.json());
 
+const requiredHeaders = z.object({
+  authorization: z.string(),
+});
+
 const v1SchemaInput = z.object({
   code: z.string(),
   lang: z.string(),
@@ -22,6 +26,16 @@ app.get("/", (req, res) => {
 
 app.post("/v1", async (req, res) => {
   const body = req.body;
+
+  const headers = requiredHeaders.safeParse(req.headers);
+
+  if (!headers.success) {
+    return res.status(401).json({ error: headers.error });
+  }
+
+  if (headers.data.authorization !== process.env.AUTHORIZATION) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   const input = v1SchemaInput.safeParse(body);
 
