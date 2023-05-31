@@ -17,14 +17,14 @@ const client = createClient({
   url: env.REDIS_URL,
 });
 
+const requiredHeaders = z.object({
+  authorization: z.string(),
+});
+
 const app = express();
 const port = 3000;
 
 app.use(bodyParser.json());
-
-const requiredHeaders = z.object({
-  authorization: z.string(),
-});
 
 const v1SchemaInput = z.object({
   code: z.string(),
@@ -36,8 +36,6 @@ const v1SchemaInput = z.object({
 app.get("/", (req, res) => {
   res.send("Healthy!");
 });
-
-let hasConnectedToRedis = false;
 
 app.post("/v1", async (req, res) => {
   const body = req.body;
@@ -56,11 +54,6 @@ app.post("/v1", async (req, res) => {
 
   if (!input.success) {
     return res.status(400).json({ error: input.error });
-  }
-
-  if (!hasConnectedToRedis) {
-    await client.connect();
-    hasConnectedToRedis = true;
   }
 
   const { code, lang, meta, theme } = input.data;
@@ -88,4 +81,16 @@ app.post("/v1", async (req, res) => {
   return res.send(html.value);
 });
 
-app.listen(port, () => console.log(`HelloNode app listening on port ${port}!`));
+const start = async () => {
+  await client.connect();
+
+  app.listen(port, () =>
+    console.log(`HelloNode app listening on port ${port}!`),
+  );
+};
+
+start().catch(async (e) => {
+  console.error(e);
+  await client.disconnect();
+  process.exit(1);
+});
