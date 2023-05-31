@@ -9,15 +9,24 @@ import { z } from "zod";
 const env = z
   .object({
     AUTHORIZATION: z.string(),
-    REDIS_URL: z.string(),
-    USE_REDIS: z.string().transform((v) => v === "true"),
+    REDIS_PASSWORD: z.string(),
+    REDIS_HOST: z.string(),
+    USE_REDIS: z
+      .string()
+      .optional()
+      .transform((v) => v === "true"),
   })
   .parse(process.env);
 
 let redis: Redis;
 
 if (env.USE_REDIS) {
-  redis = new Redis(env.REDIS_URL);
+  redis = new Redis({
+    family: 6,
+    port: 36631,
+    password: env.REDIS_PASSWORD,
+    host: env.REDIS_HOST,
+  });
 }
 
 const requiredHeaders = z.object({
