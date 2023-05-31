@@ -4,6 +4,18 @@ import { remark } from "remark";
 import remarkHtml, { Options as RemarkHtmlOptions } from "remark-html";
 import remarkTwoslash, { Options } from "remark-shiki-twoslash";
 import { z } from "zod";
+import { createClient } from "redis";
+
+const env = z
+  .object({
+    AUTHORIZATION: z.string(),
+    REDIS_URL: z.string(),
+  })
+  .parse(process.env);
+
+const client = createClient({
+  url: env.REDIS_URL,
+});
 
 const app = express();
 const port = 3000;
@@ -25,6 +37,8 @@ app.get("/", (req, res) => {
   res.send("Healthy!");
 });
 
+let hasConnectedToRedis = false;
+
 app.post("/v1", async (req, res) => {
   const body = req.body;
 
@@ -34,7 +48,7 @@ app.post("/v1", async (req, res) => {
     return res.status(401).json({ error: headers.error });
   }
 
-  if (headers.data.authorization !== process.env.AUTHORIZATION) {
+  if (headers.data.authorization !== env.AUTHORIZATION) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -44,7 +58,20 @@ app.post("/v1", async (req, res) => {
     return res.status(400).json({ error: input.error });
   }
 
+  if (!hasConnectedToRedis) {
+    await client.connect();
+    hasConnectedToRedis = true;
+  }
+
   const { code, lang, meta, theme } = input.data;
+
+  const cacheKey = JSON.stringify(input.data);
+
+  const cached = await client.get(cacheKey);
+
+  if (cached) {
+    return res.send(cached);
+  }
 
   const html = await remark()
     .use(remarkTwoslash.default, {
@@ -53,6 +80,10 @@ app.post("/v1", async (req, res) => {
     } satisfies Options)
     .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions)
     .process(["```" + lang + " " + meta, code, "```"].join("\n"));
+
+  await client.set(cacheKey, html.value, {
+    EX: 60 * 60 * 12,
+  });
 
   return res.send(html.value);
 });
