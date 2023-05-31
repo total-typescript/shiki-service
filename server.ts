@@ -89,7 +89,7 @@ app.post("/v1", async (req, res) => {
     .process(["```" + lang + " " + meta, code, "```"].join("\n"));
 
   if (env.USE_REDIS) {
-    await redis.set(cacheKey, html.value, "EX", 60 * 60 * 12);
+    await redis.set(cacheKey, html.value, "EX", 60 * 60 * 24);
   }
 
   return res.send(html.value);
