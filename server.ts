@@ -18,6 +18,7 @@ const v1SchemaInput = z.object({
   code: z.string(),
   lang: z.string(),
   meta: z.string().optional().nullable().default(""),
+  theme: z.string().optional().default("dark-plus"),
 });
 
 app.get("/", (req, res) => {
@@ -43,11 +44,11 @@ app.post("/v1", async (req, res) => {
     return res.status(400).json({ error: input.error });
   }
 
-  const { code, lang, meta } = input.data;
+  const { code, lang, meta, theme } = input.data;
 
   const html = await remark()
     .use(remarkTwoslash.default, {
-      theme: "dark-plus",
+      theme: theme,
       langs: ["typescript", "javascript", "json", "markdown", "tsx", "jsx"],
     } satisfies Options)
     .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions)
