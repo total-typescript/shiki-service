@@ -1,10 +1,10 @@
 import bodyParser from "body-parser";
 import express from "express";
+import { Redis } from "ioredis";
 import { remark } from "remark";
 import remarkHtml, { Options as RemarkHtmlOptions } from "remark-html";
 import remarkTwoslash, { Options } from "remark-shiki-twoslash";
 import { z } from "zod";
-// import { createClient } from "redis";
 
 const env = z
   .object({
@@ -13,9 +13,7 @@ const env = z
   })
   .parse(process.env);
 
-// const client = createClient({
-//   url: env.REDIS_URL,
-// });
+const redis = new Redis(env.REDIS_URL);
 
 const requiredHeaders = z.object({
   authorization: z.string(),
@@ -60,11 +58,13 @@ app.post("/v1", async (req, res) => {
 
   const cacheKey = JSON.stringify(input.data);
 
-  // const cached = await client.get(cacheKey);
+  const cached = await redis.get(cacheKey);
 
-  // if (cached) {
-  //   return res.send(cached);
-  // }
+  console.log("cached", cached);
+
+  if (cached) {
+    return res.send(cached);
+  }
 
   const html = await remark()
     .use(remarkTwoslash.default, {
@@ -74,23 +74,18 @@ app.post("/v1", async (req, res) => {
     .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions)
     .process(["```" + lang + " " + meta, code, "```"].join("\n"));
 
-  // await client.set(cacheKey, html.value, {
-  //   EX: 60 * 60 * 12,
-  // });
+  await redis.set(cacheKey, html.value, "EX", 60 * 60 * 12);
 
   return res.send(html.value);
 });
 
 const start = async () => {
-  // await client.connect();
-
   app.listen(port, () =>
     console.log(`HelloNode app listening on port ${port}!`),
   );
 };
 
 start().catch(async (e) => {
-  console.error(e);
-  // await client.disconnect();
+  console.log(e);
   process.exit(1);
 });
