@@ -10,10 +10,15 @@ const env = z
   .object({
     AUTHORIZATION: z.string(),
     REDIS_URL: z.string(),
+    USE_REDIS: z.string().transform((v) => v === "true"),
   })
   .parse(process.env);
 
-const redis = new Redis(env.REDIS_URL);
+let redis: Redis;
+
+if (env.USE_REDIS) {
+  redis = new Redis(env.REDIS_URL);
+}
 
 const requiredHeaders = z.object({
   authorization: z.string(),
@@ -58,12 +63,12 @@ app.post("/v1", async (req, res) => {
 
   const cacheKey = JSON.stringify(input.data);
 
-  const cached = await redis.get(cacheKey);
+  if (env.USE_REDIS) {
+    const cached = await redis.get(cacheKey);
 
-  console.log("cached", cached);
-
-  if (cached) {
-    return res.send(cached);
+    if (cached) {
+      return res.send(cached);
+    }
   }
 
   const html = await remark()
@@ -74,7 +79,9 @@ app.post("/v1", async (req, res) => {
     .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions)
     .process(["```" + lang + " " + meta, code, "```"].join("\n"));
 
-  await redis.set(cacheKey, html.value, "EX", 60 * 60 * 12);
+  if (env.USE_REDIS) {
+    await redis.set(cacheKey, html.value, "EX", 60 * 60 * 12);
+  }
 
   return res.send(html.value);
 });
