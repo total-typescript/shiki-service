@@ -23,7 +23,7 @@ let redis: Redis;
 if (env.USE_REDIS) {
   redis = new Redis({
     family: 6,
-    port: 36631,
+    port: 6379,
     password: env.REDIS_PASSWORD,
     host: env.REDIS_HOST,
   });
