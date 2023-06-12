@@ -1,24 +1,13 @@
 import bodyParser from "body-parser";
 import express from "express";
 import { Redis } from "ioredis";
-import { remark } from "remark";
-import remarkHtml, { Options as RemarkHtmlOptions } from "remark-html";
-import remarkTwoslash, { Options } from "remark-shiki-twoslash";
 import { z } from "zod";
+import { environmentSchema, v1SchemaInput } from "./schema.js";
+import { twoslashQueue } from "./twoslash-queue.js";
 
-const env = z
-  .object({
-    AUTHORIZATION: z.string(),
-    REDIS_PASSWORD: z.string(),
-    REDIS_HOST: z.string(),
-    USE_REDIS: z
-      .string()
-      .optional()
-      .transform((v) => v === "true"),
-  })
-  .parse(process.env);
+const env = environmentSchema.parse(process.env);
 
-let redis: Redis;
+let redis: Redis = {} as any;
 
 if (env.USE_REDIS) {
   redis = new Redis({
@@ -38,16 +27,11 @@ const port = 3000;
 
 app.use(bodyParser.json());
 
-const v1SchemaInput = z.object({
-  code: z.string(),
-  lang: z.string(),
-  meta: z.string().optional().nullable().default(""),
-  theme: z.string().optional().default("dark-plus"),
-});
-
 app.get("/", (req, res) => {
   res.send("Healthy!");
 });
+
+const queue = twoslashQueue({ env, redis });
 
 app.post("/v1", async (req, res) => {
   const body = req.body;
@@ -68,31 +52,9 @@ app.post("/v1", async (req, res) => {
     return res.status(400).json({ error: input.error });
   }
 
-  const { code, lang, meta, theme } = input.data;
+  const html = await queue.enqueue(input.data);
 
-  const cacheKey = JSON.stringify(input.data);
-
-  if (env.USE_REDIS) {
-    const cached = await redis.get(cacheKey);
-
-    if (cached) {
-      return res.send(cached);
-    }
-  }
-
-  const html = await remark()
-    .use(remarkTwoslash.default, {
-      theme: theme,
-      langs: ["typescript", "javascript", "json", "markdown", "tsx", "jsx"],
-    } satisfies Options)
-    .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions)
-    .process(["```" + lang + " " + meta, code, "```"].join("\n"));
-
-  if (env.USE_REDIS) {
-    await redis.set(cacheKey, html.value, "EX", 60 * 60 * 24);
-  }
-
-  return res.send(html.value);
+  return res.send(html);
 });
 
 const start = async () => {
