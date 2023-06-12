@@ -10,6 +10,13 @@ interface QueueItem {
   onError: () => void;
 }
 
+const processor = remark()
+  .use(remarkTwoslash.default, {
+    theme: "dark-plus",
+    langs: ["typescript", "javascript", "json", "markdown", "tsx", "jsx"],
+  } satisfies Options)
+  .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions);
+
 export const twoslashQueue = ({
   env,
   redis,
@@ -62,13 +69,9 @@ export const twoslashQueue = ({
       }
     }
 
-    const html = await remark()
-      .use(remarkTwoslash.default, {
-        theme: theme,
-        langs: ["typescript", "javascript", "json", "markdown", "tsx", "jsx"],
-      } satisfies Options)
-      .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions)
-      .process(["```" + lang + " " + meta, code, "```"].join("\n"));
+    const html = await processor.process(
+      ["```" + lang + " " + meta, code, "```"].join("\n"),
+    );
 
     if (env.USE_REDIS) {
       await redis.set(cacheKey, html.value, "EX", 60 * 60 * 24);
