@@ -4,7 +4,7 @@ export const v1SchemaInput = z.object({
   code: z.string(),
   lang: z.string(),
   meta: z.string().optional().nullable().default(""),
-  theme: z.string().optional().default("dark-plus"),
+  theme: z.string().optional().default("github-dark"),
 });
 
 export type V1Input = z.infer<typeof v1SchemaInput>;
