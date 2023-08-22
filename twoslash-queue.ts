@@ -12,7 +12,7 @@ interface QueueItem {
 
 const processor = remark()
   .use(remarkTwoslash.default, {
-    theme: "dark-plus",
+    theme: "github-dark",
     langs: ["typescript", "javascript", "json", "markdown", "tsx", "jsx"],
   } satisfies Options)
   .use(remarkHtml, { sanitize: false } satisfies RemarkHtmlOptions);
