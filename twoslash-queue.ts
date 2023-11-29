@@ -3,12 +3,8 @@ import { Environment, V1Input } from "./schema.js";
 import { remark } from "remark";
 import remarkHtml, { Options as RemarkHtmlOptions } from "remark-html";
 import remarkTwoslash, { Options } from "remark-shiki-twoslash";
-
-interface QueueItem {
-  input: V1Input;
-  onDone: (result: string) => void;
-  onError: () => void;
-}
+import { QueueItem } from "./types.js";
+import { createCacheKey } from "./createCacheKey.js";
 
 const processor = remark()
   .use(remarkTwoslash.default, {
@@ -60,7 +56,7 @@ export const twoslashQueue = ({
   const _executeQueueItem = async ({ input }: QueueItem): Promise<string> => {
     const { code, lang, meta, theme } = input;
 
-    const cacheKey = JSON.stringify(input);
+    const cacheKey = createCacheKey(input);
     if (env.USE_REDIS) {
       const cached = await redis.get(cacheKey);
 
