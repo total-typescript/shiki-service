@@ -84,7 +84,7 @@ export const twoslashQueue = ({
         onError: reject,
       });
 
-      _run();
+      return _run();
     });
   };
 
