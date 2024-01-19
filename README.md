@@ -1,4 +1,4 @@
-# hellonode
+# hellonode typescript
 
 ## A Fly Example
 
