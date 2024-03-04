@@ -1,10 +1,22 @@
-# hellonode typescript
+# Shiki Service
 
-## A Fly Example
+This service provides an API to produce shiki-twoslash html for a given code snippet.
 
-This is a simple application used in the [fly.io Getting Started](https://fly.io/docs/getting-started/node/)  documentation showing how to deploy a Node application using Flyctl's builtin Nodejs deployment option.
+## API
 
-* Run flyctl init
-* When prompted for a builder, select builtin Nodejs.
-* Run flyctl deploy
+### `POST /v1/`
 
+#### Request
+
+```json
+{
+  "code": "const a = 1",
+  "lang": "ts",
+  "meta": "twoslash", // optional
+  "theme": "github-dark" // optional
+}
+```
+
+#### Response
+
+Responds with html string.
