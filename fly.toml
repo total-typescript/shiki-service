@@ -14,6 +14,10 @@ kill_timeout = "5s"
 [env]
   PORT = "8080"
 
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"
+
 [[services]]
   protocol = "tcp"
   internal_port = 3000
